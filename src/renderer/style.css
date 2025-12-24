@@ -10,6 +10,30 @@
   --current-color: var(--color-idle);
 }
 
+/* ===== ANIMATIONS ===== */
+
+/* Gentle pulse - for idle state (subtle breathing) */
+@keyframes pulse-gentle {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.02);
+    opacity: 1;
+  }
+}
+
+/* Active pulse - for all active states (energetic) */
+@keyframes pulse-active {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
 /* Reset and base styles */
 * {
   margin: 0;
@@ -63,6 +87,9 @@ body {
   );
 
   filter: blur(20px);
+
+  /* Smooth color transitions */
+  transition: background 0.4s ease-in-out;
 }
 
 /* Outer glow layer - adds depth */
@@ -84,6 +111,9 @@ body {
   );
 
   filter: blur(30px);
+
+  /* Smooth color transitions */
+  transition: background 0.4s ease-in-out;
 }
 
 /* State-specific color overrides - set on container so both orb and tag inherit */
@@ -113,4 +143,23 @@ body {
   font-size: 16px;
   font-weight: 500;
   text-transform: capitalize; /* "idle" → "Idle" */
+
+  /* Smooth color transitions */
+  transition: background 0.3s ease-in-out,
+              border-color 0.3s ease-in-out,
+              color 0.3s ease-in-out;
+}
+
+/* ===== STATE-SPECIFIC ANIMATIONS ===== */
+
+/* Idle state - gentle breathing pulse */
+.container[data-state="idle"] .spirit-orb::before {
+  animation: pulse-gentle 4s ease-in-out infinite;
+}
+
+/* Active states - all use the same energetic pulse */
+.container[data-state="listening"] .spirit-orb::before,
+.container[data-state="thinking"] .spirit-orb::before,
+.container[data-state="speaking"] .spirit-orb::before {
+  animation: pulse-active 1s ease-in-out infinite;
 }

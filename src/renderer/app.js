@@ -48,18 +48,20 @@ function handleStateTransitions(state) {
 
   // Automatic transitions
   if (state === 'thinking') {
-    // After 1 second of "thinking", start "speaking"
+    // After 3 seconds of "thinking", start "speaking"
     // (Later: this will be when Claude finishes generating response)
+    // Longer so you can see the rotation animation
     transitionTimeout = setTimeout(() => {
       setState('speaking');
-    }, 1000);
+    }, 3000);
   }
   else if (state === 'speaking') {
-    // After 2 seconds of "speaking", return to "idle"
+    // After 4 seconds of "speaking", return to "idle"
     // (Later: this will be when TTS audio finishes playing)
+    // Longer so you can see the pulse animation
     transitionTimeout = setTimeout(() => {
       setState('idle');
-    }, 2000);
+    }, 4000);
   }
 }
 

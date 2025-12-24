@@ -358,3 +358,43 @@ _Document key decisions and learnings as we build..._
 - Add voice output, then input
 - Optimize latency as separate phase
 - Polish at the end
+
+---
+
+## Development Log
+
+### Session 1 - 2025-12-24
+
+**Completed: Iteration 1 - Core Functionality (80%)**
+
+✅ **Achievements:**
+- Set up complete Electron app structure
+- Implemented spirit orb visual with two-layer glow effect
+  - Used CSS pseudo-elements (::before, ::after) for depth
+  - Radial gradients with blur filters
+- Created 4 color states: blue (idle), green (listening), purple (thinking), orange (speaking)
+- Implemented CSS custom properties (variables) for state management
+- Fixed CSS variable scoping (container-level for inheritance)
+- Built spacebar interaction system:
+  - Press spacebar → listening
+  - Release spacebar → thinking
+  - Auto-transition (1s) → speaking
+  - Auto-transition (2s) → idle
+- State machine with guards to prevent invalid transitions
+- Proper event handling (keydown/keyup with preventDefault)
+
+📚 **Learning Topics Covered:**
+- Electron architecture (Main vs Renderer process)
+- CSS pseudo-elements and layering
+- CSS custom properties and inheritance
+- Data attributes for state management
+- JavaScript event listeners and event.code
+- setTimeout and clearTimeout
+- State machine patterns
+- Git workflow and .gitignore best practices
+
+⏸️ **Remaining for Iteration 1:**
+- Smooth color transitions (CSS transitions)
+- Animations (pulse, rotation, waveform effects)
+
+**Next Session:** Complete Iteration 1 polish, then move to Iteration 2 (Claude text conversation)
