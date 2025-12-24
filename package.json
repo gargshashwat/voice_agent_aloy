@@ -1,0 +1,15 @@
+{
+  "name": "aloy-voice-agent",
+  "version": "0.1.0",
+  "description": "Voice AI advisor for GreatInventions project",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": ["voice", "ai", "electron"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

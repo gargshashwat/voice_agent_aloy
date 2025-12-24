@@ -1,0 +1,116 @@
+/* CSS Custom Properties - Define colors for all states */
+:root {
+  /* State colors (RGB values so we can adjust opacity) */
+  --color-idle: 74, 158, 255;        /* Blue */
+  --color-listening: 76, 217, 100;   /* Green */
+  --color-thinking: 175, 82, 222;    /* Purple */
+  --color-speaking: 255, 159, 10;    /* Orange */
+
+  /* Current state color (changes dynamically) */
+  --current-color: var(--color-idle);
+}
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a1a;
+  color: white;
+  overflow: hidden; /* No scrollbars */
+}
+
+/* Container - centers everything vertically and horizontally */
+.container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full viewport height */
+  width: 100vw;
+}
+
+/* Spirit orb - soft, glowing energy ball */
+.spirit-orb {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin-bottom: 40px;
+}
+
+/* Main orb - radial gradient with blur */
+.spirit-orb::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+
+  /* Use CSS variables - changes based on state */
+  background: radial-gradient(
+    circle,
+    rgba(var(--current-color), 0.9) 0%,   /* Bright center */
+    rgba(var(--current-color), 0.6) 30%,  /* Mid-tone */
+    rgba(var(--current-color), 0.4) 60%,  /* Darker edge */
+    rgba(var(--current-color), 0.1) 100%  /* Nearly transparent */
+  );
+
+  filter: blur(20px);
+}
+
+/* Outer glow layer - adds depth */
+.spirit-orb::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+
+  /* Use CSS variables - outer glow matches state */
+  background: radial-gradient(
+    circle,
+    rgba(var(--current-color), 0.3) 0%,
+    rgba(var(--current-color), 0) 70%
+  );
+
+  filter: blur(30px);
+}
+
+/* State-specific color overrides - set on container so both orb and tag inherit */
+.container[data-state="idle"] {
+  --current-color: var(--color-idle);
+}
+
+.container[data-state="listening"] {
+  --current-color: var(--color-listening);
+}
+
+.container[data-state="thinking"] {
+  --current-color: var(--color-thinking);
+}
+
+.container[data-state="speaking"] {
+  --current-color: var(--color-speaking);
+}
+
+/* State tag - pill shape below orb (color matches state) */
+.state-tag {
+  padding: 10px 30px;
+  background: rgba(var(--current-color), 0.2);  /* Semi-transparent */
+  border: 1px solid rgba(var(--current-color), 0.5);
+  border-radius: 20px; /* Pill shape */
+  color: rgb(var(--current-color));
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: capitalize; /* "idle" → "Idle" */
+}
