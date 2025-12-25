@@ -97,43 +97,6 @@ function getSystemPrompt() {
 }
 
 /**
- * Send a message to Claude and get a response
- * @param {string} userMessage - The user's message
- * @param {Array} conversationHistory - Previous messages [{role: 'user'|'assistant', content: '...'}]
- * @returns {Promise<string>} - Claude's response
- */
-async function sendMessage(userMessage, conversationHistory = []) {
-  try {
-    // Build messages array
-    const messages = [
-      ...conversationHistory,
-      {
-        role: 'user',
-        content: userMessage,
-      },
-    ];
-
-    console.log('Sending to Claude:', userMessage);
-
-    // Call Claude API
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: getSystemPrompt(),
-      messages: messages,
-    });
-
-    const assistantMessage = response.content[0].text;
-    console.log('Claude response:', assistantMessage);
-
-    return assistantMessage;
-  } catch (error) {
-    console.error('Claude API error:', error);
-    throw error;
-  }
-}
-
-/**
  * Send a message with streaming (tokens arrive in real-time)
  * @param {string} userMessage - The user's message
  * @param {Array} conversationHistory - Previous messages
@@ -181,6 +144,5 @@ async function sendMessageStreaming(userMessage, conversationHistory = [], onTok
 }
 
 module.exports = {
-  sendMessage,
   sendMessageStreaming,
 };

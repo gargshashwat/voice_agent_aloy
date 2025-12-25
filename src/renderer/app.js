@@ -1,8 +1,9 @@
 // Renderer Process JavaScript
 // Now with Claude integration + Streaming!
 
-const { sendMessage, sendMessageStreaming } = require('../services/claude');
+const { sendMessageStreaming } = require('../services/claude');
 const { generateSummary, saveMemory, saveRawConversation, processRawConversations, clearMemories } = require('../services/memory');
+const { textToSpeechBuffer } = require('../services/elevenlabs');
 
 console.log('Aloy voice agent with Claude initialized!');
 
@@ -34,6 +35,141 @@ let conversationHistory = [];
 
 // Track if current conversation has been saved
 let lastSavedLength = 0;
+
+// Track current audio playback
+let currentAudio = null;
+
+// Sentence queue for TTS generation
+let sentenceQueue = [];
+let activeTTSCount = 0;
+const MAX_CONCURRENT_TTS = 2;  // ElevenLabs rate limit
+
+// Audio buffers with order tracking
+let audioBuffers = new Map();  // Map<orderIndex, audioBuffer>
+let nextOrderIndex = 0;        // Next sentence to queue for TTS
+let nextPlayIndex = 0;         // Next audio to play
+let isPlayingAudio = false;
+
+/**
+ * Play audio from buffer
+ * @param {Buffer} audioBuffer - Audio data as buffer
+ * @returns {Promise} - Resolves when audio finishes playing
+ */
+function playAudio(audioBuffer) {
+  return new Promise((resolve, reject) => {
+    // Convert buffer to blob
+    const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+    const audioUrl = URL.createObjectURL(blob);
+
+    // Create audio element
+    const audio = new Audio(audioUrl);
+    currentAudio = audio;
+
+    // When audio finishes
+    audio.addEventListener('ended', () => {
+      URL.revokeObjectURL(audioUrl);
+      currentAudio = null;
+      resolve();
+    });
+
+    // Handle errors
+    audio.addEventListener('error', (error) => {
+      console.error('Audio playback error:', error);
+      currentAudio = null;
+      reject(error);
+    });
+
+    // Play audio
+    audio.play();
+  });
+}
+
+/**
+ * Extract complete sentences from text
+ * @param {string} text - Text to parse
+ * @returns {Array} - Array of complete sentences
+ */
+function extractSentences(text) {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [];
+  return sentences.map(s => s.trim()).filter(s => s.length > 0);
+}
+
+/**
+ * Queue a sentence for TTS generation with order tracking
+ */
+function queueSentence(text) {
+  const orderIndex = nextOrderIndex++;
+  sentenceQueue.push({ text, orderIndex });
+  processSentences();
+}
+
+/**
+ * Process TTS queue with concurrency limit
+ */
+async function processSentences() {
+  // Process up to MAX_CONCURRENT_TTS sentences in parallel
+  while (sentenceQueue.length > 0 && activeTTSCount < MAX_CONCURRENT_TTS) {
+    const { text, orderIndex } = sentenceQueue.shift();
+    activeTTSCount++;
+
+    // Generate TTS (non-blocking)
+    textToSpeechBuffer(text)
+      .then(audioBuffer => {
+        // Store audio with its order index
+        audioBuffers.set(orderIndex, audioBuffer);
+        activeTTSCount--;
+        processSentences();  // Process next if available
+        tryPlayNextAudio();  // Check if we can play next audio
+      })
+      .catch(error => {
+        console.error('Error generating TTS:', error);
+        activeTTSCount--;
+        processSentences();
+        tryPlayNextAudio();
+      });
+  }
+}
+
+/**
+ * Try to play next audio if it's ready and in order
+ */
+function tryPlayNextAudio() {
+  if (isPlayingAudio) return;
+
+  // Check if next audio in sequence is ready
+  if (audioBuffers.has(nextPlayIndex)) {
+    playNextAudioInOrder();
+  }
+}
+
+/**
+ * Play audio buffers in correct order
+ */
+async function playNextAudioInOrder() {
+  if (isPlayingAudio) return;
+
+  isPlayingAudio = true;
+
+  // Play all consecutive ready buffers
+  while (audioBuffers.has(nextPlayIndex)) {
+    const audioBuffer = audioBuffers.get(nextPlayIndex);
+    audioBuffers.delete(nextPlayIndex);
+    nextPlayIndex++;
+
+    try {
+      await playAudio(audioBuffer);
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    }
+  }
+
+  isPlayingAudio = false;
+
+  // Return to idle if everything is done
+  if (sentenceQueue.length === 0 && activeTTSCount === 0 && audioBuffers.size === 0) {
+    setState('idle');
+  }
+}
 
 /**
  * Save conversation summary to memory
@@ -82,17 +218,9 @@ function handleStateTransitions(state) {
     transitionTimeout = null;
   }
 
-  // For text mode, transitions are faster since we're not simulating voice
-  if (state === 'thinking') {
-    // Will transition to speaking when Claude responds
-    // (handled in sendMessageToAloy)
-  }
-  else if (state === 'speaking') {
-    // After showing response, return to idle
-    transitionTimeout = setTimeout(() => {
-      setState('idle');
-    }, 2000);
-  }
+  // State transitions are now handled by audio playback
+  // Orb stays in 'speaking' state while audio plays
+  // Returns to 'idle' when audio finishes (handled in playAudio)
 }
 
 /**
@@ -131,12 +259,13 @@ async function sendMessageToAloy(userMessage) {
     messagesDiv.appendChild(aloyMessageEl);
 
     let fullResponse = '';
+    let sentencesProcessed = [];
 
     // Send to Claude with streaming
     await sendMessageStreaming(
       userMessage,
       conversationHistory,
-      (token) => {
+      async (token) => {
         // This callback runs for each token as it arrives
 
         // First token - change to speaking state
@@ -150,8 +279,30 @@ async function sendMessageToAloy(userMessage) {
 
         // Auto-scroll to show latest text
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // Check for complete sentences and generate audio
+        const sentences = extractSentences(fullResponse);
+        const newSentences = sentences.slice(sentencesProcessed.length);
+
+        // Process new complete sentences
+        for (const sentence of newSentences) {
+          sentencesProcessed.push(sentence);
+          queueSentence(sentence);
+        }
       }
     );
+
+    // Process any remaining partial sentence
+    const finalSentences = extractSentences(fullResponse);
+    if (fullResponse && finalSentences.length === sentencesProcessed.length) {
+      // There's text left that doesn't end with punctuation
+      const lastProcessedText = sentencesProcessed.join('');
+      const remainingText = fullResponse.substring(lastProcessedText.length).trim();
+
+      if (remainingText) {
+        queueSentence(remainingText);
+      }
+    }
 
     // Update conversation history with complete response
     conversationHistory.push(
