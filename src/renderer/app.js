@@ -4,8 +4,9 @@
 const { sendMessageStreaming } = require('../services/claude');
 const { generateSummary, saveMemory, saveRawConversation, processRawConversations, clearMemories } = require('../services/memory');
 const { textToSpeechBuffer } = require('../services/elevenlabs');
+const { startLiveTranscription } = require('../services/deepgram');
 
-console.log('Aloy voice agent with Claude initialized!');
+console.log('Aloy voice agent initialized');
 
 // Process any raw conversations from previous session
 // (Converts them to summaries in the background)
@@ -49,6 +50,15 @@ let audioBuffers = new Map();  // Map<orderIndex, audioBuffer>
 let nextOrderIndex = 0;        // Next sentence to queue for TTS
 let nextPlayIndex = 0;         // Next audio to play
 let isPlayingAudio = false;
+
+// Voice input (STT)
+let mediaStream = null;
+let audioContext = null;
+let mediaStreamSource = null;
+let audioProcessor = null;
+let deepgramConnection = null;
+let currentTranscript = '';
+let isRecording = false;
 
 /**
  * Play audio from buffer
@@ -364,7 +374,118 @@ clearMemoryBtn.addEventListener('click', () => {
 });
 
 /**
- * Spacebar still works for future voice mode
+ * Start recording audio from microphone
+ */
+async function startRecording() {
+  try {
+    // Get microphone access
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }
+    });
+
+    // Create audio context with device's native sample rate
+    audioContext = new AudioContext();
+    await audioContext.resume();
+
+    mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
+    audioProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+
+    // Start Deepgram connection
+    currentTranscript = '';
+    isRecording = true;
+    deepgramConnection = startLiveTranscription((transcript, isFinal) => {
+      currentTranscript = transcript;
+
+      // Show interim transcript in input field
+      if (!isFinal) {
+        messageInput.value = transcript;
+      }
+    });
+
+    // Send audio data to Deepgram
+    audioProcessor.onaudioprocess = (e) => {
+      if (!isRecording || !deepgramConnection) return;
+
+      const inputData = e.inputBuffer.getChannelData(0);
+
+      // Convert Float32Array to Int16Array (Deepgram expects PCM16)
+      const pcm16 = new Int16Array(inputData.length);
+      for (let i = 0; i < inputData.length; i++) {
+        const s = Math.max(-1, Math.min(1, inputData[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+
+      // Send to Deepgram
+      if (deepgramConnection.getReadyState() === 1) {
+        deepgramConnection.send(pcm16.buffer);
+      }
+    };
+
+    // Connect audio nodes
+    mediaStreamSource.connect(audioProcessor);
+    audioProcessor.connect(audioContext.destination);
+  } catch (error) {
+    console.error('Error starting recording:', error);
+    addMessage('Microphone access denied. Please allow microphone access and try again.', 'system');
+    setState('idle');
+  }
+}
+
+/**
+ * Stop recording and get final transcript
+ */
+async function stopRecording() {
+  // Stop sending audio immediately
+  isRecording = false;
+
+  // Small delay to let final audio chunks process
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // Disconnect audio processor
+  if (audioProcessor) {
+    audioProcessor.disconnect();
+    audioProcessor.onaudioprocess = null;
+    audioProcessor = null;
+  }
+
+  // Disconnect media stream source
+  if (mediaStreamSource) {
+    mediaStreamSource.disconnect();
+    mediaStreamSource = null;
+  }
+
+  // Close Deepgram connection
+  if (deepgramConnection) {
+    deepgramConnection.finish();
+
+    // Wait a bit for final transcript
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    deepgramConnection = null;
+  }
+
+  // Stop microphone
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+  }
+
+  // Close audio context
+  if (audioContext) {
+    await audioContext.close();
+    audioContext = null;
+  }
+
+  // Return final transcript
+  return currentTranscript;
+}
+
+/**
+ * Spacebar for voice input (press to talk)
  */
 document.addEventListener('keydown', (event) => {
   // Ignore if typing in input
@@ -389,9 +510,10 @@ document.addEventListener('keydown', (event) => {
 
   isSpacebarPressed = true;
   setState('listening');
+  startRecording();
 });
 
-document.addEventListener('keyup', (event) => {
+document.addEventListener('keyup', async (event) => {
   if (event.code !== 'Space') {
     return;
   }
@@ -400,9 +522,17 @@ document.addEventListener('keyup', (event) => {
 
   if (currentState === 'listening') {
     setState('thinking');
-    // In voice mode, this would trigger STT → Claude
-    // For now, just return to idle
-    setTimeout(() => setState('idle'), 2000);
+
+    // Stop recording and get transcript
+    const transcript = await stopRecording();
+
+    if (transcript && transcript.trim()) {
+      // Send to Claude
+      await sendMessageToAloy(transcript);
+    } else {
+      addMessage('No speech detected. Try again.', 'system');
+      setState('idle');
+    }
   }
 });
 
@@ -415,5 +545,5 @@ window.addEventListener('beforeunload', (event) => {
   }
 });
 
-console.log('Ready! Type a message and press Enter or click Send.');
-console.log('Spacebar still works for testing state changes.');
+console.log('Ready! Type a message OR hold spacebar to talk.');
+console.log('Text: Type and press Enter | Voice: Hold spacebar and speak');

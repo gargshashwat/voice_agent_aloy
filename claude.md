@@ -527,3 +527,98 @@ _Document key decisions and learnings as we build..._
 - Memory loads last 10 summaries into system prompt
 
 **Next Session:** Iteration 4 - Voice Output (TTS with ElevenLabs), or Iteration 5 - Voice Input (STT with Deepgram)
+
+---
+
+### Session 4 - 2025-12-25 (Continued)
+
+**Completed: Iteration 4 - Voice Output (100%)**
+
+✅ **Achievements:**
+- Integrated ElevenLabs TTS for voice output
+- Implemented sentence-level streaming for low latency
+- Built parallel TTS generation (up to 2 concurrent requests)
+- Created order-preserving audio playback system
+- Fixed audio scrambling with Map-based ordering
+- Cleaned up dead code (removed test files)
+
+📚 **Learning Topics:**
+- ElevenLabs API and ReadableStream handling
+- Sentence extraction with regex
+- Parallel vs sequential processing trade-offs
+- Race condition handling in async operations
+- Audio playback with HTML5 Audio API
+- Blob/ObjectURL memory management
+- Rate limiting (ElevenLabs: 2 concurrent max)
+
+🎯 **What Works:**
+- Aloy speaks responses with natural voice
+- Parallel TTS generation (low latency)
+- Sequential playback (correct order)
+- Text and audio appear simultaneously
+- Order preserved even when TTS completes out of sequence
+
+🔧 **Technical Implementation:**
+```
+Streaming text → Extract sentences → Parallel TTS (max 2) →
+Store in Map with order index → Play in sequence
+```
+
+**Key Innovation:**
+- Order tracking with `Map<orderIndex, audioBuffer>`
+- `nextOrderIndex++` when queuing
+- `nextPlayIndex++` when playing
+- Handles race conditions where fast sentences finish before slow ones
+
+**Next Session:** Iteration 5 - Voice Input (STT with Deepgram)
+
+---
+
+### Session 5 - 2025-12-25 (Continued)
+
+**Completed: Iteration 5 - Voice Input (100%)**
+
+✅ **Achievements:**
+- Integrated Deepgram STT for speech-to-text
+- Implemented spacebar push-to-talk
+- Real-time transcription (interim results show as you speak)
+- Web Audio API microphone capture
+- PCM16 audio format conversion
+- Hybrid mode (text + voice both work)
+- Fixed Bluetooth compatibility (uses native sample rate)
+
+📚 **Learning Topics:**
+- Deepgram Live Transcription API
+- Web Audio API (AudioContext, MediaStreamSource, ScriptProcessorNode)
+- getUserMedia() for microphone access
+- Float32 → PCM16 audio conversion
+- Sample rate handling (48kHz native vs 16kHz optimal)
+- Bluetooth audio device limitations
+- WebSocket bidirectional streaming
+
+🎯 **What Works:**
+- Hold spacebar → Record voice → Release → Aloy responds
+- See words appear in input field as you speak
+- Same Claude flow as text input
+- Full voice conversation loop working
+
+🔧 **Technical Implementation:**
+```
+Mic → MediaStreamSource → ScriptProcessorNode →
+Float32 audio → Convert to PCM16 → Send to Deepgram →
+Receive transcript → Send to Claude → TTS → Audio response
+```
+
+**Key Learnings:**
+- Bluetooth devices (AirPods) need native sample rate
+- ScriptProcessorNode deprecated but simpler than AudioWorklet
+- Must connect processor to destination for callbacks to fire
+- `isRecording` flag prevents audio leak after release
+
+**Challenges Solved:**
+1. **Bluetooth AirPods silent audio:** Fixed by using native sample rate instead of forcing 16kHz
+2. **Audio continues after release:** Added `isRecording` flag for immediate stop
+3. **Empty transcripts:** Sample rate mismatch - changed to 48kHz
+
+**Status:** ✅ **Full voice conversation working!**
+
