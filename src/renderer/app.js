@@ -1,38 +1,37 @@
 // Renderer Process JavaScript
-// This runs in the browser environment (like a normal website)
+// Now with Claude integration!
 
-console.log('Aloy voice agent initialized!');
+const { sendMessage } = require('../services/claude');
+
+console.log('Aloy voice agent with Claude initialized!');
 
 // Get references to DOM elements
 const container = document.getElementById('container');
 const stateTag = document.getElementById('state-tag');
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
 
 // Track current state
 let currentState = 'idle';
 
-// Track if spacebar is currently held down (prevent multiple triggers)
+// Track if spacebar is currently held down
 let isSpacebarPressed = false;
 
-// Store timeout IDs so we can cancel them if needed
+// Store timeout IDs
 let transitionTimeout = null;
+
+// Conversation history for Claude
+let conversationHistory = [];
 
 /**
  * Change the application state
- * @param {string} newState - One of: 'idle', 'listening', 'thinking', 'speaking'
  */
 function setState(newState) {
   console.log(`State: ${currentState} → ${newState}`);
-
   currentState = newState;
-
-  // Update the container's data-state attribute
-  // This changes the --current-color CSS variable for both orb and tag
   container.dataset.state = newState;
-
-  // Update the text in the state tag
   stateTag.textContent = newState;
-
-  // Handle automatic transitions based on new state
   handleStateTransitions(newState);
 }
 
@@ -40,49 +39,113 @@ function setState(newState) {
  * Handle automatic state transitions
  */
 function handleStateTransitions(state) {
-  // Clear any pending transitions
   if (transitionTimeout) {
     clearTimeout(transitionTimeout);
     transitionTimeout = null;
   }
 
-  // Automatic transitions
+  // For text mode, transitions are faster since we're not simulating voice
   if (state === 'thinking') {
-    // After 3 seconds of "thinking", start "speaking"
-    // (Later: this will be when Claude finishes generating response)
-    // Longer so you can see the rotation animation
-    transitionTimeout = setTimeout(() => {
-      setState('speaking');
-    }, 3000);
+    // Will transition to speaking when Claude responds
+    // (handled in sendMessageToAloy)
   }
   else if (state === 'speaking') {
-    // After 4 seconds of "speaking", return to "idle"
-    // (Later: this will be when TTS audio finishes playing)
-    // Longer so you can see the pulse animation
+    // After showing response, return to idle
     transitionTimeout = setTimeout(() => {
       setState('idle');
-    }, 4000);
+    }, 2000);
   }
 }
 
 /**
- * Handle spacebar press - start listening
+ * Add a message to the chat UI
+ */
+function addMessage(content, role = 'user') {
+  const messageEl = document.createElement('div');
+  messageEl.className = `message ${role}`;
+  messageEl.textContent = content;
+  messagesDiv.appendChild(messageEl);
+
+  // Auto-scroll to bottom
+  messagesDiv.scrollTop = messagesDiv.height;
+}
+
+/**
+ * Send message to Aloy (Claude) and get response
+ */
+async function sendMessageToAloy(userMessage) {
+  if (!userMessage.trim()) return;
+
+  try {
+    // Add user message to UI
+    addMessage(userMessage, 'user');
+
+    // Clear input
+    messageInput.value = '';
+
+    // Change to thinking state
+    setState('thinking');
+
+    // Send to Claude
+    const response = await sendMessage(userMessage, conversationHistory);
+
+    // Update conversation history
+    conversationHistory.push(
+      { role: 'user', content: userMessage },
+      { role: 'assistant', content: response }
+    );
+
+    // Change to speaking state
+    setState('speaking');
+
+    // Add Aloy's response to UI
+    addMessage(response, 'assistant');
+
+  } catch (error) {
+    console.error('Error talking to Aloy:', error);
+    addMessage('Sorry, I had trouble connecting. Check your API key and internet connection.', 'system');
+    setState('idle');
+  }
+}
+
+/**
+ * Handle send button click
+ */
+sendBtn.addEventListener('click', () => {
+  const message = messageInput.value;
+  sendMessageToAloy(message);
+});
+
+/**
+ * Handle Enter key in input
+ */
+messageInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    const message = messageInput.value;
+    sendMessageToAloy(message);
+  }
+});
+
+/**
+ * Spacebar still works for future voice mode
  */
 document.addEventListener('keydown', (event) => {
-  // Only respond to spacebar
+  // Ignore if typing in input
+  if (document.activeElement === messageInput) {
+    return;
+  }
+
   if (event.code !== 'Space') {
     return;
   }
 
-  // Prevent default spacebar behavior (page scrolling)
   event.preventDefault();
 
-  // Prevent repeated firing while holding spacebar
   if (isSpacebarPressed) {
     return;
   }
 
-  // Only allow listening if we're in idle state
   if (currentState !== 'idle') {
     console.log('Cannot listen - not in idle state');
     return;
@@ -92,23 +155,20 @@ document.addEventListener('keydown', (event) => {
   setState('listening');
 });
 
-/**
- * Handle spacebar release - start thinking/processing
- */
 document.addEventListener('keyup', (event) => {
-  // Only respond to spacebar
   if (event.code !== 'Space') {
     return;
   }
 
-  // Reset the flag
   isSpacebarPressed = false;
 
-  // Only transition if we're currently listening
   if (currentState === 'listening') {
     setState('thinking');
+    // In voice mode, this would trigger STT → Claude
+    // For now, just return to idle
+    setTimeout(() => setState('idle'), 2000);
   }
 });
 
-console.log('Ready! Press and hold SPACEBAR to speak.');
-console.log('States: Idle (blue) → Listening (green) → Thinking (purple) → Speaking (orange) → Idle');
+console.log('Ready! Type a message and press Enter or click Send.');
+console.log('Spacebar still works for testing state changes.');

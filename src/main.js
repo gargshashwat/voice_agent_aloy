@@ -10,14 +10,14 @@ let mainWindow;
 function createWindow() {
   // Create the browser window
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1200,  // Wider for chat panel
+    height: 700,
     backgroundColor: '#1a1a1a', // Dark background
     webPreferences: {
-      // Security: Enable contextIsolation (best practice)
-      contextIsolation: true,
-      // We don't need Node.js in the renderer for now
-      nodeIntegration: false,
+      // For prototype: enable Node.js in renderer
+      // (In production, use IPC instead)
+      contextIsolation: false,
+      nodeIntegration: true,
     }
   });
 

@@ -394,7 +394,72 @@ _Document key decisions and learnings as we build..._
 - Git workflow and .gitignore best practices
 
 ⏸️ **Remaining for Iteration 1:**
-- Smooth color transitions (CSS transitions)
-- Animations (pulse, rotation, waveform effects)
+- ~~Smooth color transitions (CSS transitions)~~ ✅
+- ~~Animations (pulse, rotation, waveform effects)~~ ✅
 
-**Next Session:** Complete Iteration 1 polish, then move to Iteration 2 (Claude text conversation)
+**Status:** ✅ **Iteration 1 COMPLETE!**
+
+---
+
+### Session 2 - 2025-12-24 (Continued)
+
+**Completed: Iteration 1 - Polish & Refinement (100%)**
+
+✅ **Achievements:**
+- Added smooth CSS transitions (0.3-0.4s) for color changes
+- Implemented CSS animations using @keyframes
+- Created two animation types:
+  - `pulse-gentle` (4s) for idle state
+  - `pulse-active` (1s) for all active states
+- Simplified animation strategy (removed invisible rotation)
+- Adjusted timing delays (3s thinking, 4s speaking) for better visibility
+- Learned difference between CSS transitions vs animations
+
+📚 **Learning Topics:**
+- CSS transitions (reactive, one-time)
+- CSS animations (@keyframes, infinite loops)
+- Transform property composition
+- Animation timing functions
+- When to use transitions vs animations
+
+---
+
+### Session 2 (Continued) - 2025-12-24
+
+**Completed: Iteration 2 - Text-Based Conversation (95%)**
+
+✅ **Achievements:**
+- Set up Claude API with secure environment variables (.env)
+- Installed Anthropic SDK and configured for Electron
+- Created comprehensive system prompt for Aloy personality
+- Built chat interface (two-panel layout: orb left, chat right)
+- Integrated Claude API with conversation history
+- Implemented full message flow: user → thinking → Aloy responds → speaking
+- Refined Aloy's personality to match Horizon game character:
+  - Efficient, stoic, direct
+  - Brief responses (1-2 sentences)
+  - No excessive enthusiasm
+  - Matter-of-fact tone
+- Chat panel designed to be easily removable for voice-only mode later
+
+📚 **Learning Topics:**
+- API key management and security (.env files)
+- Anthropic Claude SDK integration
+- Async/await patterns in JavaScript
+- System prompts and AI personality design
+- DOM manipulation (adding messages dynamically)
+- Conversation history management
+- Two-panel flexbox layout
+- Node.js integration in Electron (nodeIntegration)
+
+🎯 **What Works:**
+- Chat with Aloy about GreatInventions topics
+- She knows all published articles (WiFi, Container, QR)
+- Maintains conversation context
+- Responds with focused, actionable suggestions
+- Orb states sync with conversation (idle → thinking → speaking)
+
+⏸️ **Optional Remaining:**
+- Streaming responses (tokens arrive gradually) - nice-to-have
+
+**Next Session:** Iteration 3 - Memory System (conversation summaries across sessions), or Iteration 4 - Voice Output (TTS)
