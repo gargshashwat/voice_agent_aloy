@@ -2,17 +2,20 @@
 
 A voice AI advisor for the GreatInventions project, featuring Aloy from Horizon as your brainstorming partner.
 
-## Current Status: Iteration 2 Complete ✅
+## Current Status: Iteration 3 Complete ✅
 
 **What Works:**
 - Beautiful animated spirit orb UI with 4 color states
 - Text-based chat with Claude (Sonnet 4.5)
+- Streaming responses (text appears word-by-word)
 - Aloy personality: efficient, stoic, direct (like the game character)
 - Conversation history maintained
 - Full GreatInventions context loaded
+- **Memory system**: Conversations saved across sessions
+- **Smart save**: Raw messages on close → summaries on startup
+- **Clear Memory button**: Reset for fresh start
 
 **What's Next:**
-- Iteration 3: Memory system (conversation summaries)
 - Iteration 4: Voice output (TTS with ElevenLabs)
 - Iteration 5: Voice input (STT with Deepgram)
 

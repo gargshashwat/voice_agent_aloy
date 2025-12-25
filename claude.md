@@ -459,7 +459,71 @@ _Document key decisions and learnings as we build..._
 - Responds with focused, actionable suggestions
 - Orb states sync with conversation (idle → thinking → speaking)
 
-⏸️ **Optional Remaining:**
-- Streaming responses (tokens arrive gradually) - nice-to-have
+**Status:** ✅ **Iteration 2 COMPLETE!**
+
+---
+
+### Session 3 - 2025-12-25
+
+**Completed: Iteration 2 - Streaming Responses (100%)**
+
+✅ **Achievements:**
+- Implemented streaming responses for real-time text display
+- Modified `sendMessageToAloy` to use `sendMessageStreaming` function
+- Aloy's responses now appear word-by-word instead of all at once
+- Orb transitions to 'speaking' state immediately when first token arrives
+- Auto-scroll keeps latest text visible during streaming
+- Conversation feels more responsive and natural
+
+📚 **Learning Topics:**
+- Streaming API patterns with Claude SDK
+- Real-time DOM updates with callbacks
+- Managing state transitions during streaming
+- UX improvements through progressive rendering
+
+🎯 **What Works:**
+- Full streaming conversation experience
+- Smooth state transitions (thinking → speaking on first token)
+- Responsive UI that updates as tokens arrive
+- Better perceived latency and engagement
 
 **Next Session:** Iteration 3 - Memory System (conversation summaries across sessions), or Iteration 4 - Voice Output (TTS)
+
+---
+
+### Session 3 (Continued) - 2025-12-25
+
+**Completed: Iteration 3 - Memory System (100%)**
+
+✅ **Achievements:**
+- Built complete memory service with conversation summaries
+- Implemented reliable save-on-close using raw messages (no async issues)
+- Auto-converts raw messages to summaries on app startup
+- Memory context loaded and included in system prompt
+- "Clear Memory" button with confirmation dialog
+- Dual-format storage: raw (instant save) → summary (background processing)
+- No data loss even with < 6 messages
+
+📚 **Learning Topics:**
+- File system operations in Node.js (fs.readFileSync, fs.writeFileSync)
+- JSON storage patterns for small data
+- Async timing issues with window.beforeunload
+- Background processing on app startup
+- Synchronous vs asynchronous save strategies
+- Type-based data structures (raw vs summary)
+
+🎯 **What Works:**
+- Conversations saved automatically every 6 messages
+- Raw messages saved instantly on app close (reliable!)
+- Raw messages converted to summaries on next startup
+- Aloy remembers previous conversations across sessions
+- Clear Memory button resets everything
+- Memory file is human-readable and editable JSON
+
+🔧 **Technical Solution:**
+- Problem: beforeunload with async API calls was unreliable
+- Solution: Save raw messages (synchronous), summarize later
+- Format: `{type: "raw", messages: [...]}` → `{type: "summary", summary: "..."}`
+- Memory loads last 10 summaries into system prompt
+
+**Next Session:** Iteration 4 - Voice Output (TTS with ElevenLabs), or Iteration 5 - Voice Input (STT with Deepgram)

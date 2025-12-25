@@ -1,6 +1,7 @@
 // Claude API Service - Handles conversation with Aloy
 require('dotenv').config();
 const Anthropic = require('@anthropic-ai/sdk');
+const { getRecentMemories, formatMemoriesForPrompt } = require('./memory');
 
 // Initialize Claude client
 // Note: dangerouslyAllowBrowser is safe here because we're in Electron (desktop app),
@@ -10,8 +11,8 @@ const anthropic = new Anthropic({
   dangerouslyAllowBrowser: true,  // Required for Electron
 });
 
-// Aloy's system prompt - defines her personality and knowledge
-const SYSTEM_PROMPT = `You are Aloy, a focused advisor helping with the GreatInventions project.
+// Base system prompt - defines Aloy's personality and knowledge
+const BASE_SYSTEM_PROMPT = `You are Aloy, a focused advisor helping with the GreatInventions project.
 
 You are modeled after Aloy from the Horizon game series (Horizon Zero Dawn, Horizon Forbidden West). Embody her personality: capable, direct, and pragmatic. No-nonsense but not cold.
 
@@ -86,6 +87,16 @@ Examples:
 Be direct. Be useful. No cheerleading.`;
 
 /**
+ * Generate system prompt with memory context
+ * @returns {string} - System prompt with memory context included
+ */
+function getSystemPrompt() {
+  const memories = getRecentMemories(10); // Get last 10 conversation summaries
+  const memoryContext = formatMemoriesForPrompt(memories);
+  return BASE_SYSTEM_PROMPT + memoryContext;
+}
+
+/**
  * Send a message to Claude and get a response
  * @param {string} userMessage - The user's message
  * @param {Array} conversationHistory - Previous messages [{role: 'user'|'assistant', content: '...'}]
@@ -108,7 +119,7 @@ async function sendMessage(userMessage, conversationHistory = []) {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(),
       messages: messages,
     });
 
@@ -144,7 +155,7 @@ async function sendMessageStreaming(userMessage, conversationHistory = [], onTok
     const stream = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(),
       messages: messages,
       stream: true,
     });

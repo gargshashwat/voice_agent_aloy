@@ -87,6 +87,9 @@ body {
 .chat-header {
   padding: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .chat-header h3 {
@@ -98,6 +101,29 @@ body {
 .chat-header small {
   color: rgba(255, 255, 255, 0.5);
   font-size: 12px;
+}
+
+/* Clear memory button */
+.clear-memory-btn {
+  padding: 8px 16px;
+  background: rgba(255, 69, 58, 0.15);
+  border: 1px solid rgba(255, 69, 58, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 99, 88, 0.9);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-memory-btn:hover {
+  background: rgba(255, 69, 58, 0.25);
+  border-color: rgba(255, 69, 58, 0.5);
+  color: #fff;
+}
+
+.clear-memory-btn:active {
+  transform: scale(0.96);
 }
 
 /* Messages area */
