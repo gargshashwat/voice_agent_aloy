@@ -79,7 +79,7 @@ Aloy has full knowledge of GreatInventions:
 
 ## Feature Roadmap
 
-### Iteration 1: Static UI + State Management
+### Iteration 1: Static UI + State Management ✅ COMPLETE
 **Goal:** Visual design working perfectly, state transitions smooth and automatic
 
 **Tasks:**
@@ -111,7 +111,7 @@ Aloy has full knowledge of GreatInventions:
 
 ---
 
-### Iteration 2: Text-Based Conversation Loop
+### Iteration 2: Text-Based Conversation Loop ✅ COMPLETE
 **Goal:** Claude integration working with GreatInventions context (no voice yet)
 
 **Tasks:**
@@ -139,7 +139,7 @@ Aloy has full knowledge of GreatInventions:
 
 ---
 
-### Iteration 3: Memory System
+### Iteration 3: Memory System ✅ COMPLETE
 **Goal:** Conversation summaries and continuity across sessions
 
 **Tasks:**
@@ -166,7 +166,7 @@ Aloy has full knowledge of GreatInventions:
 
 ---
 
-### Iteration 4: Voice Output (TTS)
+### Iteration 4: Voice Output (TTS) ✅ COMPLETE
 **Goal:** Aloy speaks responses out loud
 
 **Tasks:**
@@ -193,7 +193,7 @@ Aloy has full knowledge of GreatInventions:
 
 ---
 
-### Iteration 5: Voice Input (STT)
+### Iteration 5: Voice Input (STT) ✅ COMPLETE
 **Goal:** Full voice conversation - speak to Aloy
 
 **Tasks:**
@@ -220,35 +220,70 @@ Aloy has full knowledge of GreatInventions:
 
 ---
 
-### Iteration 6: Latency Optimization
-**Goal:** Conversation feels instant and natural (<2 sec response time)
+### Iteration 6: Interruption + Latency Optimization 🔜 NEXT
+**Goal:** Natural conversation flow with interruption capability and reduced latency
 
-**Tasks:**
-- Measure current latency at each step
-  - STT transcription time
-  - Claude response generation time
-  - TTS audio generation time
-  - Total end-to-end time
-- Implement sentence-level chunking:
-  - Parse Claude stream for sentence boundaries
-  - Send each sentence to ElevenLabs immediately
-  - Play audio chunks as they arrive
-- Optimize audio buffering strategy
-- Add parallel processing (generate next sentence while speaking)
+**Part 1: Interruption (Option A - Discard & Fresh)**
+- Allow spacebar press during 'speaking' state to interrupt Aloy
+- Stop audio playback immediately
+- Clear all TTS queues (sentenceQueue, audioBuffers)
+- Reset state indices (nextOrderIndex, nextPlayIndex)
+- Start listening for new input
+- Discard old response completely (no resume/queue)
+
+**Part 2: Latency Optimization**
+- Reduce stopRecording() wait: 500ms → 200ms
+- Start Claude streaming immediately (parallel with Deepgram finalization)
+- Profile current timing:
+  - Speak (3s) → Wait (0.5s) → Claude (1s) → TTS (0.8s) → Play
+  - Current total: ~5.3s
+  - Target: <3s
+- Optimize audio buffering
 - Test with various conversation patterns
 
+**Implementation Details:**
+```javascript
+// Modified keydown handler
+if (currentState === 'speaking') {
+  stopAloyCompletely();  // New function
+  setState('listening');
+  startRecording();
+  return;
+}
+
+// New function
+function stopAloyCompletely() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+  }
+  sentenceQueue = [];
+  audioBuffers.clear();
+  nextOrderIndex = 0;
+  nextPlayIndex = 0;
+  isPlayingAudio = false;
+  activeTTSCount = 0;
+}
+```
+
+**Edge Cases:**
+- Interrupting during thinking state (allow)
+- Rapid successive interruptions (last one wins)
+- Interrupting during first sentence (same behavior)
+
 **Success Criteria:**
-- Speak a question
-- Aloy starts responding within 2 seconds
-- Response feels natural, not choppy
-- Can have fluid back-and-forth conversation
-- No awkward pauses or lag
+- Can interrupt Aloy mid-sentence
+- Interruption is instant (<100ms)
+- New question gets fresh response
+- No queue confusion or state issues
+- Total response time <3 seconds
 
 **What You'll Learn:**
+- Interruption handling patterns
+- Clean state reset strategies
 - Performance profiling
-- Streaming optimization techniques
-- Audio buffer management
-- Parallel processing patterns
+- Latency optimization techniques
 
 ---
 
@@ -317,8 +352,10 @@ These are explicitly NOT included in initial build:
 - Integration with newsletter tools
 - Multiple agent personalities
 - Mobile app version
-- Voice interruption (cutting off Aloy mid-sentence)
+- ~~Voice interruption (cutting off Aloy mid-sentence)~~ ✅ Now in Iteration 6
 - Conversation search/browse interface
+- Voice Activity Detection (VAD) for automatic turn-taking
+- Resume interrupted responses (using Option A: discard & fresh instead)
 
 (Can be added in V2 after learning from V1)
 

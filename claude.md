@@ -622,3 +622,71 @@ Receive transcript → Send to Claude → TTS → Audio response
 
 **Status:** ✅ **Full voice conversation working!**
 
+
+---
+
+## Next Session Planning - 2025-12-25
+
+**Discussion Topic:** Making voice chat more interactive
+
+**Decision:** Implement Iteration 6 - Interruption + Latency Optimization
+
+### Interruption Design Discussion
+
+**Question posed:** When user interrupts Aloy mid-sentence, what happens?
+
+**Options considered:**
+
+**Option A: Discard & Fresh Response** ⭐ CHOSEN
+- Stop Aloy immediately
+- Clear all queues and state
+- User speaks new question
+- Aloy generates fresh response to new question
+- Original response discarded completely
+
+**Option B: Queue & Resume** ❌ Rejected
+- Save interrupted response state
+- Handle new question
+- Resume original response afterward
+- Too complex, awkward UX
+
+**Option C: Smart Context Switch** ❌ Rejected
+- AI determines if interruption is related
+- Integrate or discard based on context
+- Very complex, adds latency
+
+**Rationale for Option A:**
+- Natural conversation flow (humans don't "resume" after interruption)
+- Simple implementation (~15 lines)
+- No queue management complexity
+- User interrupts BECAUSE they want to change direction
+- Clean state reset
+
+### Implementation Plan
+
+**Part 1: Interruption**
+- Create `stopAloyCompletely()` function
+- Modify spacebar keydown to allow interruption during 'speaking' state
+- Clear all queues: sentenceQueue, audioBuffers, currentAudio
+- Reset indices: nextOrderIndex, nextPlayIndex
+- Start fresh recording
+
+**Part 2: Latency Optimization**
+- Reduce stopRecording() wait: 500ms → 200ms
+- Parallelize Claude start with Deepgram finalization
+- Profile timing to measure improvements
+- Target: <3s total response time (from ~5.3s)
+
+**Edge Cases:**
+- Rapid interruptions (last one wins)
+- Interrupt during thinking (allow)
+- Interrupt during first sentence (same behavior)
+
+**Files to update:**
+- `src/renderer/app.js` - Main implementation
+- Documentation updated (ROADMAP.md, NEXT_SESSION.md)
+
+**Status:** Ready to implement in next session
+
+See `NEXT_SESSION.md` for detailed implementation plan.
+
